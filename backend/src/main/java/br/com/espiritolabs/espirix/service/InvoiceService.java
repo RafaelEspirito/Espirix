@@ -4,6 +4,7 @@ import br.com.espiritolabs.espirix.domain.*;
 import br.com.espiritolabs.espirix.dto.ApiDtos.*;
 import br.com.espiritolabs.espirix.exception.BusinessException;
 import br.com.espiritolabs.espirix.repository.*;
+import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.data.jpa.domain.Specification;
@@ -19,10 +20,11 @@ public class InvoiceService {
     private final ClientRepository clients;
     private final PaymentRepository payments;
     private final Clock clock;
+    private final br.com.espiritolabs.espirix.security.EmpresaAccess empresa;
 
     @Transactional(readOnly = true)
     public Page<TituloResponse> listar(InvoiceFilters.Filtro filtro, Pageable page) {
-        return invoices.findAll(InvoiceFilters.build(filtro, LocalDate.now(clock)), page)
+        return invoices.findAll(InvoiceFilters.build(filtro, LocalDate.now(clock), empresa.id()), page)
                 .map(i -> DtoMapper.titulo(i, LocalDate.now(clock)));
     }
     @Transactional(readOnly = true)
@@ -32,23 +34,24 @@ public class InvoiceService {
     @Transactional(readOnly = true)
     public Page<ClienteResponse> clientes(String busca, Pageable page) {
         Specification<Client> spec = (root, query, cb) -> {
-            if (busca == null || busca.isBlank()) return cb.conjunction();
+            if (busca == null || busca.isBlank()) return cb.equal(root.get("empresaId"), empresa.id());
             String term = "%" + busca.trim().toLowerCase(Locale.ROOT) + "%";
-            return cb.or(cb.like(cb.lower(root.get("razaoSocial")), term),
-                cb.like(cb.lower(root.get("nomeFantasia")), term));
+            return cb.and(cb.equal(root.get("empresaId"), empresa.id()),
+                cb.or(cb.like(cb.lower(root.get("razaoSocial")), term),
+                cb.like(cb.lower(root.get("nomeFantasia")), term)));
         };
         return clients.findAll(spec, page).map(DtoMapper::cliente);
     }
     @Transactional(readOnly = true)
-    public ClienteResponse cliente(Long id) { return DtoMapper.cliente(clients.findById(id)
+    public ClienteResponse cliente(Long id) { return DtoMapper.cliente(clients.findByIdAndEmpresaId(id,empresa.id())
             .orElseThrow(() -> BusinessException.notFound("Cliente nao encontrado: " + id))); }
     @Transactional(readOnly = true)
     public List<PagamentoResponse> historico(Long tituloId) {
         find(tituloId);
-        return payments.findByTituloIdOrderByDataPagamentoAscIdAsc(tituloId)
+        return payments.findByEmpresaIdAndTituloIdOrderByDataPagamentoAscIdAsc(empresa.id(),tituloId)
                 .stream().map(DtoMapper::pagamento).toList();
     }
-    private Invoice find(Long id) { return invoices.findById(id)
+    private Invoice find(Long id) { return invoices.findByIdAndEmpresaId(id,empresa.id())
             .orElseThrow(() -> BusinessException.notFound("Titulo nao encontrado: " + id)); }
 
     @Scheduled(cron = "0 5 0 * * *", zone = "${app.timezone:America/Bahia}")

@@ -9,10 +9,12 @@ import java.time.LocalDate;
 
 @Entity
 @Table(name = "titulos", uniqueConstraints = @UniqueConstraint(name = "uk_titulo_natural",
-    columnNames = {"cliente_id", "numero_nota", "numero_parcela", "tipo_operacao"}),
+    columnNames = {"empresa_id", "cliente_id", "numero_nota", "numero_parcela", "tipo_operacao"}),
     indexes = {@Index(name = "ix_titulo_vencimento", columnList = "data_vencimento")})
 @Getter @Setter @NoArgsConstructor
 public class Invoice {
+    @Column(name = "empresa_id", nullable = false, updatable = false)
+    private Long empresaId;
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(name = "numero_nota", nullable = false, length = 100)

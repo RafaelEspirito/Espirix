@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: espirix
+      POSTGRES_USER: espirix
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Configure DB_PASSWORD no arquivo .env}
+    volumes:
+      - espirix_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U espirix -d espirix"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+  backend:
+    build: ./backend
+    environment:
+      SPRING_PROFILES_ACTIVE: postgres
+      DB_URL: jdbc:postgresql://db:5432/espirix
+      DB_USER: espirix
+      DB_PASSWORD: ${DB_PASSWORD:?Configure DB_PASSWORD}
+      ESPIRIX_MASTER_EMAIL: ${ESPIRIX_MASTER_EMAIL:?Configure ESPIRIX_MASTER_EMAIL}
+      ESPIRIX_MASTER_PASSWORD: ${ESPIRIX_MASTER_PASSWORD:?Configure ESPIRIX_MASTER_PASSWORD}
+      ESPIRIX_PERMITIR_LIMPEZA_TRABALHO: ${ESPIRIX_PERMITIR_LIMPEZA_TRABALHO:-false}
+      COOKIE_SECURE: ${COOKIE_SECURE:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8085}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+  frontend:
+    build: ./frontend
+    ports:
+      - "127.0.0.1:8085:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+volumes:
+  espirix_pg:

@@ -17,15 +17,19 @@ public class PaymentService {
     private final InvoiceRepository invoices;
     private final PaymentRepository payments;
     private final Clock clock;
+    private final br.com.espiritolabs.espirix.security.EmpresaAccess empresa;
+    private final br.com.espiritolabs.espirix.repository.CompanyRepository companies;
 
     @Transactional
     public TituloResponse pagar(Long id, PagamentoRequest request) {
+        companies.findLockedById(empresa.id()).orElseThrow();
         Invoice i = locked(id);
         aplicar(i, request.valor(), request.dataPagamento(), request.observacao());
         return DtoMapper.titulo(i, LocalDate.now(clock));
     }
     @Transactional
     public List<TituloResponse> pagarLote(LotePagamentosRequest request) {
+        companies.findLockedById(empresa.id()).orElseThrow();
         Set<Long> unique = new HashSet<>();
         for (ItemBaixaRequest item : request.pagamentos()) {
             if (!unique.add(item.tituloId())) throw BusinessException.badRequest("Titulo repetido no mesmo lote: " + item.tituloId());
@@ -43,6 +47,7 @@ public class PaymentService {
     }
     @Transactional
     public List<TituloResponse> quitarLote(QuitarLoteRequest request) {
+        companies.findLockedById(empresa.id()).orElseThrow();
         if (new HashSet<>(request.titulosIds()).size() != request.titulosIds().size())
             throw BusinessException.badRequest("IDs de titulos repetidos no lote");
         List<Invoice> locked = request.titulosIds().stream().sorted().map(this::locked).toList();
@@ -56,7 +61,7 @@ public class PaymentService {
         return result;
     }
     private Invoice locked(Long id) {
-        return invoices.findLockedById(id)
+        return invoices.findLockedByIdAndEmpresaId(id,empresa.id())
             .orElseThrow(() -> BusinessException.notFound("Titulo nao encontrado: " + id));
     }
     private void aplicar(Invoice invoice, BigDecimal valor, LocalDate date, String obs) {
@@ -66,6 +71,7 @@ public class PaymentService {
             throw BusinessException.badRequest("Pagamento supera o saldo ou e nao positivo: titulo " + invoice.getId());
         valor = FinanceUtils.dinheiro(valor);
         Payment payment = new Payment();
+        payment.setEmpresaId(empresa.id());
         payment.setTitulo(invoice);
         payment.setValor(valor);
         payment.setDataPagamento(date);

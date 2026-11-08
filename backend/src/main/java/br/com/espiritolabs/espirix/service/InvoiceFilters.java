@@ -12,13 +12,14 @@ public final class InvoiceFilters {
                          LocalDate vencimentoDe, LocalDate vencimentoAte,
                          StatusTitulo status, TipoOperacao tipoOperacao, Boolean somenteAbertos) { }
 
-    public static Specification<Invoice> build(Filtro f, LocalDate hoje) {
+    public static Specification<Invoice> build(Filtro f, LocalDate hoje, Long empresaId) {
         if (f.emissaoDe() != null && f.emissaoAte() != null && f.emissaoDe().isAfter(f.emissaoAte()))
             throw new IllegalArgumentException("Periodo de emissao invertido");
         if (f.vencimentoDe() != null && f.vencimentoAte() != null && f.vencimentoDe().isAfter(f.vencimentoAte()))
             throw new IllegalArgumentException("Periodo de vencimento invertido");
         return (root, query, cb) -> {
             var tests = new ArrayList<Predicate>();
+            tests.add(cb.equal(root.get("empresaId"), empresaId));
             if (f.tipoOperacao() != null) tests.add(cb.equal(root.get("tipoOperacao"), f.tipoOperacao()));
             if (f.busca() != null && !f.busca().isBlank()) {
                 var client = root.join("cliente");
