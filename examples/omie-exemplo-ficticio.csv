@@ -1,0 +1,5 @@
+Razão Social;Nome Fantasia;CNPJ/CPF;Número Documento;Parcela;Tipo Operação;Data Emissão;Data Vencimento;Data Pagamento;Valor Original;Valor Pago;Situação
+Empresa Exemplo A Ltda;Exemplo A;00000000000191;NF-1001;01/02;RECEBER;01/10/2026;20/11/2026;;1.250,00;0,00;A vencer
+Empresa Exemplo A Ltda;Exemplo A;00000000000191;NF-1001;02/02;RECEBER;01/10/2026;20/12/2026;;1.250,00;0,00;A vencer
+Comercial Exemplo B;Exemplo B;00000000000272;NF-2040;UNICA;RECEBER;10/10/2026;25/10/2026;30/10/2026;3.000,00;1.100,00;Parcial
+Fornecedor Exemplo C;Exemplo C;00000000000353;DOC-01;UNICA;PAGAR;05/10/2026;30/11/2026;;840,00;0,00;A vencer
