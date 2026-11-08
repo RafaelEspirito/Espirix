@@ -7,9 +7,11 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "clientes", uniqueConstraints = @UniqueConstraint(name = "uk_cliente_chave", columnNames = "chave_busca"))
+@Table(name = "clientes", uniqueConstraints = @UniqueConstraint(name = "uk_cliente_chave", columnNames = {"empresa_id", "chave_busca"}))
 @Getter @Setter @NoArgsConstructor
 public class Client {
+    @Column(name = "empresa_id", nullable = false, updatable = false)
+    private Long empresaId;
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(name = "razao_social", nullable = false, length = 200)

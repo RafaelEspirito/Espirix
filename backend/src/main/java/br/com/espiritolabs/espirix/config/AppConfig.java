@@ -22,8 +22,9 @@ public class AppConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(Arrays.stream(origins.split(",")).map(String::trim).toList());
         config.setAllowedMethods(java.util.List.of("GET", "POST", "OPTIONS"));
-        config.setAllowedHeaders(java.util.List.of("Content-Type", "Authorization"));
+        config.setAllowedHeaders(java.util.List.of("Content-Type", "Authorization", "X-CSRF-TOKEN"));
         config.setMaxAge(3600L);
+        config.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", config);
         return new CorsFilter(source);

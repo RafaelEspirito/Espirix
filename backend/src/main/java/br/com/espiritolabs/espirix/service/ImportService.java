@@ -8,6 +8,7 @@ import br.com.espiritolabs.espirix.repository.*;
 import br.com.espiritolabs.espirix.util.FinanceUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
+import org.springframework.http.HttpStatus;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,14 +26,18 @@ public class ImportService {
     private final PaymentRepository payments;
     private final ImportBatchRepository batches;
     private final Clock clock;
+    private final br.com.espiritolabs.espirix.security.EmpresaAccess empresa;
+    private final br.com.espiritolabs.espirix.repository.CompanyRepository companies;
     @Value("${app.importacao.max-registros:20000}") private int maxRows;
 
     @Transactional
     public ImportacaoResponse importar(String filename, OrigemArquivo source,
                                        byte[] bytes, String checksum, TipoOperacao tipoForcado) throws IOException {
+        companies.findLockedById(empresa.id()).orElseThrow();
         List<ImportedInvoice> imported = (source == OrigemArquivo.CSV ? csv : pdf).parse(bytes);
         if (imported.size() > maxRows) throw BusinessException.badRequest("Arquivo excede " + maxRows + " titulos");
         ImportBatch batch = new ImportBatch();
+        batch.setEmpresaId(empresa.id());
         batch.setNomeArquivo(filename);
         batch.setTipoArquivo(source);
         batch.setSha256(checksum);
@@ -53,11 +58,11 @@ public class ImportService {
             if (!seen.add(naturalKey))
                 throw BusinessException.badRequest("Titulo repetido dentro do mesmo arquivo: " + input.numeroNota()
                     + ", parcela " + input.numeroParcela());
-            Client client = clients.findByChaveBusca(clientKey).orElseGet(() -> {
+            Client client = clients.findByEmpresaIdAndChaveBusca(empresa.id(),clientKey).orElseGet(() -> {
                 // Um cadastro antigo sem CNPJ pode ser reconciliado quando chega a identificacao fiscal.
                 if (clientKey.startsWith("DOC:")) {
                     String oldKey = FinanceUtils.clienteKey(null, input.razaoSocial());
-                    var old = clients.findByChaveBusca(oldKey);
+                    var old = clients.findByEmpresaIdAndChaveBusca(empresa.id(),oldKey);
                     if (old.isPresent() && (old.get().getCnpjCpf() == null || old.get().getCnpjCpf().isBlank())) {
                         Client migrated = old.get();
                         migrated.setChaveBusca(clientKey);
@@ -68,12 +73,13 @@ public class ImportService {
             });
             boolean clientUpdated = updateClient(client, input);
             client = clients.save(client);
-            Optional<Invoice> opt = invoices.findByClienteIdAndNumeroNotaAndNumeroParcelaAndTipoOperacao(
-                client.getId(), input.numeroNota(), input.numeroParcela(), input.tipoOperacao());
+            Optional<Invoice> opt = invoices.findByEmpresaIdAndClienteIdAndNumeroNotaAndNumeroParcelaAndTipoOperacao(
+                empresa.id(), client.getId(), input.numeroNota(), input.numeroParcela(), input.tipoOperacao());
             Invoice invoice;
             boolean changed = clientUpdated;
             if (opt.isEmpty()) {
                 invoice = new Invoice();
+                invoice.setEmpresaId(empresa.id());
                 invoice.setCliente(client);
                 invoice.setNumeroNota(input.numeroNota());
                 invoice.setNumeroParcela(input.numeroParcela());
@@ -93,6 +99,7 @@ public class ImportService {
                 if (input.dataPagamento() == null || input.dataPagamento().isAfter(LocalDate.now(clock)))
                     throw BusinessException.badRequest("Data do pagamento importado invalida");
                 Payment payment = new Payment();
+                payment.setEmpresaId(empresa.id());
                 payment.setTitulo(invoice);
                 payment.setValor(delta);
                 payment.setDataPagamento(input.dataPagamento());
@@ -123,6 +130,7 @@ public class ImportService {
 
     private Client newClient(ImportedInvoice i, String key) {
         Client c = new Client();
+        c.setEmpresaId(empresa.id());
         c.setChaveBusca(key);
         return c;
     }
@@ -151,6 +159,6 @@ public class ImportService {
     }
     @Transactional(readOnly = true)
     public Page<ImportacaoResponse> historico(Pageable page) {
-        return batches.findAll(page).map(DtoMapper::importacao);
+        return batches.findByEmpresaId(empresa.id(),page).map(DtoMapper::importacao);
     }
 }

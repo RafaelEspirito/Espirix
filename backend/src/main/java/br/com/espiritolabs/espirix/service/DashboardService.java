@@ -19,16 +19,17 @@ public class DashboardService {
     private final PaymentRepository payments;
     private final ClientRepository clients;
     private final Clock clock;
+    private final br.com.espiritolabs.espirix.security.EmpresaAccess empresa;
     private static final BigDecimal ZERO = BigDecimal.ZERO.setScale(2);
 
     private LocalDate hoje() { return LocalDate.now(clock); }
     private List<Invoice> titulos(TipoOperacao tipo, Long clienteId) {
-        if (clienteId != null && !clients.existsById(clienteId)) throw BusinessException.notFound("Cliente nao encontrado");
-        return clienteId == null ? invoices.findByTipoOperacao(tipo) : invoices.findByClienteIdAndTipoOperacao(clienteId, tipo);
+        if (clienteId != null && !clients.existsByIdAndEmpresaId(clienteId,empresa.id())) throw BusinessException.notFound("Cliente nao encontrado");
+        return clienteId == null ? invoices.findByEmpresaIdAndTipoOperacao(empresa.id(),tipo) : invoices.findByEmpresaIdAndClienteIdAndTipoOperacao(empresa.id(),clienteId, tipo);
     }
     private List<Payment> pagos(TipoOperacao tipo, Long clienteId) {
-        return clienteId == null ? payments.findByTituloTipoOperacao(tipo)
-            : payments.findByTituloClienteIdAndTituloTipoOperacao(clienteId, tipo);
+        return clienteId == null ? payments.findByEmpresaIdAndTituloTipoOperacao(empresa.id(),tipo)
+            : payments.findByEmpresaIdAndTituloClienteIdAndTituloTipoOperacao(empresa.id(),clienteId, tipo);
     }
     private static BigDecimal sum(Collection<BigDecimal> valores) {
         return valores.stream().reduce(ZERO, BigDecimal::add);
@@ -110,7 +111,7 @@ public class DashboardService {
                   LocalDate vencimentoDe, LocalDate vencimentoAte, StatusTitulo status, TipoOperacao tipo) {
         InvoiceFilters.Filtro filtro = new InvoiceFilters.Filtro(busca, emissaoDe, emissaoAte,
             vencimentoDe, vencimentoAte, status, tipo, null);
-        List<Invoice> filtered = invoices.findAll(InvoiceFilters.build(filtro, hoje()));
+        List<Invoice> filtered = invoices.findAll(InvoiceFilters.build(filtro, hoje(), empresa.id()));
         return filtered.stream().collect(Collectors.groupingBy(i -> i.getCliente().getId())).values().stream()
             .map(group -> {
                 Client client = group.getFirst().getCliente();

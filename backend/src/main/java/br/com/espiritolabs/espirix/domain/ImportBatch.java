@@ -10,6 +10,8 @@ import java.time.LocalDateTime;
 @Table(name = "importacoes", indexes = @Index(name = "ix_importacao_data", columnList = "data_importacao"))
 @Getter @Setter @NoArgsConstructor
 public class ImportBatch {
+    @Column(name = "empresa_id", nullable = false, updatable = false)
+    private Long empresaId;
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(name = "nome_arquivo", nullable = false, length = 255)

@@ -12,6 +12,8 @@ import java.time.LocalDateTime;
 @Table(name = "pagamentos", indexes = @Index(name = "ix_pagamento_data", columnList = "data_pagamento"))
 @Getter @Setter @NoArgsConstructor
 public class Payment {
+    @Column(name = "empresa_id", nullable = false, updatable = false)
+    private Long empresaId;
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)

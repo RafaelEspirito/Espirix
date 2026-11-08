@@ -3,7 +3,10 @@ package br.com.espiritolabs.espirix.service;
 import br.com.espiritolabs.espirix.domain.*;
 import br.com.espiritolabs.espirix.dto.ApiDtos.*;
 import br.com.espiritolabs.espirix.repository.*;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.*;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import br.com.espiritolabs.espirix.security.EspirixPrincipal;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
@@ -25,6 +28,17 @@ class ImportAndPaymentIntegrationTest {
     @Autowired private PaymentRepository payments;
     @Autowired private DashboardService dashboard;
     @Autowired private Clock clock;
+    @Autowired private CompanyRepository companies;
+    @BeforeEach void autenticar() {
+        var u = new UserAccount();u.setId(900L);u.setEmail("testes@exemplo.invalid");
+        u.setNome("Teste");u.setSenhaHash("ignorado");u.setPerfil(UserRole.FINANCEIRO);
+        u.setEmpresa(companies.findBySlug("demo").orElseThrow());
+        var principal = new EspirixPrincipal(u);
+        SecurityContextHolder.getContext().setAuthentication(
+            new UsernamePasswordAuthenticationToken(principal,null,principal.getAuthorities()));
+    }
+    @AfterEach void desautenticar() { SecurityContextHolder.clearContext(); }
+
 
     private byte[] csv(String valorPago, String data) {
         LocalDate hoje = LocalDate.now(clock);
@@ -54,6 +68,6 @@ class ImportAndPaymentIntegrationTest {
         assertThat(changed.quantidadeAtualizados()).isEqualTo(1);
         Invoice refreshed = invoices.findById(invoice.getId()).orElseThrow();
         assertThat(refreshed.getSaldoDevedor()).isEqualByComparingTo("800.00");
-        assertThat(payments.findByTituloIdOrderByDataPagamentoAscIdAsc(invoice.getId())).hasSize(2);
+        assertThat(payments.findByEmpresaIdAndTituloIdOrderByDataPagamentoAscIdAsc(invoice.getEmpresaId(),invoice.getId())).hasSize(2);
     }
 }
