@@ -26,6 +26,7 @@ public class AuthController {
     public record NovoUsuario(@NotBlank @Email String email,@NotBlank String nome,
         @NotBlank String senha,@NotNull UserRole perfil) { }
     public record UsuarioDto(Long id,String email,String nome,UserRole perfil,boolean ativo) { }
+    public record AlterarSenha(@NotBlank String senhaAtual, @NotBlank String novaSenha) { }
     @GetMapping("/csrf") public Map<String,String> csrf(CsrfToken token){return Map.of("token",token.getToken());}
     @GetMapping("/me") public Me me(){
         EspirixPrincipal p=empresa.principal();
@@ -42,6 +43,20 @@ public class AuthController {
         Company c=companies.findById(body.empresaId()).orElseThrow(()->new ResponseStatusException(HttpStatus.NOT_FOUND));
         request.getSession().setAttribute(EmpresaAccess.EMPRESA_ATIVA,c.getId());
         return me();
+    }
+    @PostMapping("/senha") @ResponseStatus(HttpStatus.NO_CONTENT) @Transactional
+    public void alterarMinhaSenha(@Valid @RequestBody AlterarSenha body) {
+        Long usuarioId = empresa.principal().id();
+        UserAccount usuario = users.findById(usuarioId)
+            .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        if (!passwordEncoder.matches(body.senhaAtual(), usuario.getSenhaHash()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Senha atual incorreta");
+        if (body.novaSenha().length() < 12 || body.novaSenha().length() > 128)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A nova senha precisa ter 12 a 128 caracteres");
+        if (passwordEncoder.matches(body.novaSenha(), usuario.getSenhaHash()))
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Escolha uma senha diferente da atual");
+        usuario.setSenhaHash(passwordEncoder.encode(body.novaSenha()));
+        users.save(usuario);
     }
     @GetMapping("/usuarios") public List<UsuarioDto> usuarios(){
         if(!empresa.admin()) throw new AccessDeniedException("Acesso negado");

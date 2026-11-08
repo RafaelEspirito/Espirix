@@ -19,6 +19,17 @@ class ApiSecurityIntegrationTest {
         mvc.perform(get("/api/dashboard/resumo")).andExpect(status().isUnauthorized());
         mvc.perform(post("/api/importacoes")).andExpect(status().isForbidden());
     }
+    @Test void financeiroNaoPodeListarEmpresasMesmoPelaApi() throws Exception {
+        var user = new UserAccount(); user.setId(101L); user.setNome("Financeiro");
+        user.setEmail("usuario@exemplo.invalid"); user.setSenhaHash("x");
+        user.setPerfil(UserRole.FINANCEIRO);
+        user.setEmpresa(companies.findBySlug("trabalho").orElseThrow());
+        mvc.perform(get("/api/auth/empresas").with(user(new EspirixPrincipal(user))))
+            .andExpect(status().isForbidden());
+        mvc.perform(post("/api/auth/workspace").with(user(new EspirixPrincipal(user)))
+            .with(csrf()).contentType("application/json").content("{\"empresaId\":1}"))
+            .andExpect(status().isForbidden());
+    }
     @Test void financeiroNaoPodeApagarAmbiente() throws Exception {
         var user=new UserAccount();user.setId(100L);user.setNome("Teste");
         user.setEmail("financeiro@exemplo.invalid");user.setSenhaHash("x");user.setPerfil(UserRole.FINANCEIRO);

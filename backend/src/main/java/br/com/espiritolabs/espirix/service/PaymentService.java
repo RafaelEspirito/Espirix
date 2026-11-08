@@ -19,6 +19,7 @@ public class PaymentService {
     private final Clock clock;
     private final br.com.espiritolabs.espirix.security.EmpresaAccess empresa;
     private final br.com.espiritolabs.espirix.repository.CompanyRepository companies;
+    private final AuditLogRepository audit;
 
     @Transactional
     public TituloResponse pagar(Long id, PagamentoRequest request) {
@@ -76,11 +77,18 @@ public class PaymentService {
         payment.setValor(valor);
         payment.setDataPagamento(date);
         payment.setOrigem(OrigemPagamento.MANUAL);
+        payment.setUsuarioId(empresa.principal().id());
         payment.setObservacao(obs);
         payments.save(payment);
         invoice.setValorPago(invoice.getValorPago().add(valor));
         if (invoice.getDataPagamento() == null || invoice.getDataPagamento().isBefore(date)) invoice.setDataPagamento(date);
         invoice.recalcular(LocalDate.now(clock));
         invoices.save(invoice);
+        AuditLog log = new AuditLog();
+        log.setEmpresaId(empresa.id());
+        log.setUsuarioId(empresa.principal().id());
+        log.setAcao("PAGAMENTO_MANUAL");
+        log.setDetalhes("titulo=" + invoice.getId() + ";valor=" + valor + ";data=" + date);
+        audit.save(log);
     }
 }

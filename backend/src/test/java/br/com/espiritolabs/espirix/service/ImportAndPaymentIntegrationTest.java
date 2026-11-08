@@ -59,6 +59,8 @@ class ImportAndPaymentIntegrationTest {
         var pay = paymentService.pagar(invoice.getId(), new PagamentoRequest(
             new java.math.BigDecimal("150.00"), LocalDate.now(clock), "Parcial"));
         assertThat(pay.saldoDevedor()).isEqualByComparingTo("850.00");
+        assertThat(payments.findByEmpresaIdAndTituloIdOrderByDataPagamentoAscIdAsc(invoice.getEmpresaId(), invoice.getId())
+            .getFirst().getUsuarioId()).isEqualTo(900L);
         assertThat(pay.status()).isEqualTo(StatusTitulo.PAGA_PARCIAL);
         assertThat(dashboard.resumo(TipoOperacao.RECEBER).dividaAtiva()).isEqualByComparingTo("850.00");
         var oldAgain = importer.importar("antigo.csv", OrigemArquivo.CSV, initial, "1", null);

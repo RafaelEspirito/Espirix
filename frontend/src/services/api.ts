@@ -46,6 +46,9 @@ export const api = {
     return (await http.get<Me>('/auth/me')).data
   },
   async logout() { await http.post('/auth/logout'); csrfToken = null },
+  async alterarMinhaSenha(senhaAtual: string, novaSenha: string) {
+    await http.post('/auth/senha', { senhaAtual, novaSenha })
+  },
   async empresas() { return (await http.get<EmpresaInfo[]>('/auth/empresas')).data },
   async workspace(empresaId: number) { return (await http.post<Me>('/auth/workspace', { empresaId })).data },
   async usuarios() { return (await http.get<Usuario[]>('/auth/usuarios')).data },

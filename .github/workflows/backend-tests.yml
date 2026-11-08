@@ -1,33 +1,39 @@
-name: Espirix Backend - Java 21
-
+name: Espirix CI — Java 21 e React
 on:
   push:
     paths:
       - 'backend/**'
+      - 'frontend/**'
       - '.github/workflows/backend-tests.yml'
   pull_request:
     paths:
       - 'backend/**'
+      - 'frontend/**'
       - '.github/workflows/backend-tests.yml'
-
+permissions:
+  contents: read
 jobs:
-  test:
+  backend-tests:
     runs-on: ubuntu-latest
-
-    defaults:
-      run:
-        working-directory: backend
-
     steps:
       - uses: actions/checkout@v4
-
-      - name: Configurar Java 21
-        uses: actions/setup-java@v4
+      - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
           cache: maven
           cache-dependency-path: backend/pom.xml
-
-      - name: Executar testes
-        run: mvn -B --no-transfer-progress clean verify
+      - name: Testes Java + Spring
+        run: mvn -B -f backend/pom.xml --no-transfer-progress clean verify
+  frontend-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Instalar e compilar frontend
+        working-directory: frontend
+        run: |
+          npm install --no-audit --no-fund
+          npm run build
