@@ -43,8 +43,8 @@ O **Espirix** é um projeto pessoal de software para gestão financeira, pensado
 ## Executar
 
 ```bash
-mvn clean test
-mvn spring-boot:run
+mvn -f backend/pom.xml clean test
+mvn -f backend/pom.xml spring-boot:run
 ```
 
 API: <http://localhost:8080/api/dashboard/resumo>  
@@ -52,17 +52,17 @@ Documentação interativa: <http://localhost:8080/swagger-ui.html>
 OpenAPI JSON: <http://localhost:8080/v3/api-docs>  
 Health: <http://localhost:8080/actuator/health>
 
-O banco H2 é criado em `./data/financeiro.mv.db` e permanece após reiniciar o aplicativo (diretório ignorado pelo Git).
+O banco H2 fica em ./data/financeiro.mv.db, relativo ao diretório de execução. Execute os comandos a partir da raiz do repositório para reutilizar o banco existente. A pasta data/ não é versionada no Git.
 
 ## Importar relatório fictício
 
 ```bash
 curl -X POST 'http://localhost:8080/api/importacoes' \
-  -F 'arquivo=@examples/omie-exemplo-ficticio.csv'
+-F "arquivo=@examples/omie-exemplo-ficticio.csv"
 
 # Para forçar a categoria de todos os registros, mesmo que o arquivo não possua coluna 'Tipo Operação':
 curl -X POST 'http://localhost:8080/api/importacoes?tipoOperacao=PAGAR' \
-  -F 'arquivo=@examples/omie-exemplo-ficticio.csv'
+-F "arquivo=@examples/omie-exemplo-ficticio.csv"
 ```
 
 **Atenção:** o segundo exemplo é didático; em uso real, importe arquivos de recebíveis e pagamentos separados e selecione o tipo correto. O `tipoOperacao` de cada registro determina se os valores entram em contas a receber ou a pagar. Sem coluna nem parâmetro, o padrão do adaptador é `RECEBER`.

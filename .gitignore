@@ -8,3 +8,8 @@ data/
 .vscode/
 .env
 .DS_Store
+.env.*
+!.env.example
+
+*.log
+backend/target/
