@@ -28,6 +28,7 @@ public class ImportService {
     private final Clock clock;
     private final br.com.espiritolabs.espirix.security.EmpresaAccess empresa;
     private final br.com.espiritolabs.espirix.repository.CompanyRepository companies;
+    private final AuditLogRepository audit;
     @Value("${app.importacao.max-registros:20000}") private int maxRows;
 
     @Transactional
@@ -104,6 +105,7 @@ public class ImportService {
                 payment.setValor(delta);
                 payment.setDataPagamento(input.dataPagamento());
                 payment.setOrigem(OrigemPagamento.IMPORTACAO);
+                payment.setUsuarioId(empresa.principal().id());
                 payment.setImportacao(batch);
                 payment.setObservacao("Ajuste cumulativo importado do ERP");
                 // A identidade do titulo deve existir antes do pagamento.
@@ -125,7 +127,14 @@ public class ImportService {
         batch.setQuantidadeRegistrosNovos(created);
         batch.setQuantidadeAtualizados(updated);
         batch.setQuantidadeIgnorados(ignored);
-        return DtoMapper.importacao(batches.saveAndFlush(batch));
+        ImportBatch saved = batches.saveAndFlush(batch);
+        AuditLog log = new AuditLog();
+        log.setEmpresaId(empresa.id());
+        log.setUsuarioId(empresa.principal().id());
+        log.setAcao("IMPORTACAO");
+        log.setDetalhes("lote=" + saved.getId() + ";novos=" + created + ";atualizados=" + updated + ";ignorados=" + ignored);
+        audit.save(log);
+        return DtoMapper.importacao(saved);
     }
 
     private Client newClient(ImportedInvoice i, String key) {

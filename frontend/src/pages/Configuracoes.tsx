@@ -15,6 +15,10 @@ export function Configuracoes() {
   const [clearing,setClearing]=useState(false)
   const [clearMessage,setClearMessage]=useState('')
   const [adminError,setAdminError]=useState('')
+  const [senhaAtual,setSenhaAtual]=useState('')
+  const [novaSenha,setNovaSenha]=useState('')
+  const [senhaAviso,setSenhaAviso]=useState('')
+  const [alterandoSenha,setAlterandoSenha]=useState(false)
   const [usuarioNome,setUsuarioNome]=useState('')
   const [usuarioEmail,setUsuarioEmail]=useState('')
   const [usuarioSenha,setUsuarioSenha]=useState('')
@@ -29,6 +33,16 @@ export function Configuracoes() {
     if(!window.confirm(`Última confirmação: excluir todos os dados financeiros de ${preview.empresa}?`))return;
     setClearing(true);setAdminError('');try{await api.limparWorkspace(confirmacao);setPreview(await api.limpezaPreview());setConfirmacao('');setClearMessage('Dados financeiros deste ambiente excluídos. Atualize o dashboard.')}catch(e){setAdminError(mensagemErro(e))}finally{setClearing(false)}}
 
+  async function alterarSenha(event:React.FormEvent) {
+    event.preventDefault()
+    setSenhaAviso('');setAlterandoSenha(true)
+    try {
+      await api.alterarMinhaSenha(senhaAtual,novaSenha)
+      setSenhaAtual('');setNovaSenha('')
+      setSenhaAviso('Senha atualizada. Encerre a sessão e entre com a nova senha.')
+    } catch(e) {setSenhaAviso(mensagemErro(e))}
+    finally {setAlterandoSenha(false)}
+  }
   const [checking, setChecking] = useState(false)
   const [connection, setConnection] = useState<'unknown' | 'ok' | 'error'>('unknown')
   const [error, setError] = useState('')
@@ -37,6 +51,13 @@ export function Configuracoes() {
     <Card><CardTitle title="Integração com a API" subtitle="Conectividade entre a interface e a API protegida."/><div className="settings-row"><div className="flex items-center gap-3"><div className="settings-icon"><Server size={19}/></div><div><p className="font-semibold text-sm">Spring Boot</p><p className="muted text-xs mt-1">API via /api · mesma origem</p></div></div><StatusPill tone={connection === 'ok' ? 'green' : connection === 'error' ? 'red' : 'neutral'} label={connection === 'ok' ? 'Conectado' : connection === 'error' ? 'Indisponível' : 'Não verificado'}/></div><Button className="mt-5" disabled={checking} onClick={check}><RefreshCw size={16} className={checking ? 'animate-spin' : ''}/>{checking ? 'Verificando...' : 'Testar conexão'}</Button>{error && <div className="mt-4"><ErrorNotice error={error}/></div>}<p className="text-xs muted mt-5">Teste realizado com <code>GET /api/dashboard/resumo</code>; nenhum dado é modificado.</p></Card>
     <Card><CardTitle title="Tecnologias e ambiente"/><div className="space-y-4"><div className="settings-row !py-0"><div className="flex items-center gap-3"><div className="settings-icon"><Monitor size={18}/></div><div><p className="text-sm font-semibold">Frontend</p><p className="muted text-xs">React · TypeScript · Vite · Tailwind</p></div></div><StatusPill label="Web" tone="blue"/></div><div className="settings-row"><div className="flex items-center gap-3"><div className="settings-icon"><Activity size={18}/></div><div><p className="text-sm font-semibold">Backend</p><p className="muted text-xs">Java 21 · Spring Boot · H2/PostgreSQL</p></div></div></div></div></Card>
     <Card><CardTitle title="Sobre o projeto"/><div className="rounded-xl bg-[var(--surface-2)] p-5"><div className="text-xl font-extrabold">espirix<span className="text-cyan-500">.</span></div><div className="muted text-xs uppercase tracking-widest mt-1">by Espirito Labs</div><p className="text-sm leading-relaxed mt-4 muted">Plataforma modular de gestão financeira, inicialmente focada em títulos, recebimentos, pagamentos e importações de relatórios.</p><div className="flex gap-2 items-center text-xs mt-4"><CheckCircle2 size={16} className="text-emerald-500"/> Frontend conectado aos contratos do backend inicial.</div></div><a href="https://github.com/RafaelEspirito/Espirix" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2 mt-5 text-sm font-semibold text-cyan-500 hover:underline"><GitBranch size={16}/> Ver código-fonte <ExternalLink size={14}/></a></Card></div>
+    <div className="mt-6 max-w-xl"><Card><CardTitle title="Segurança da conta" subtitle="Altere sua senha de acesso. Não compartilhe credenciais entre usuários."/>
+      <form className="space-y-3" onSubmit={alterarSenha}>
+        <label className="field"><span>Senha atual</span><input type="password" autoComplete="current-password" className="input" required value={senhaAtual} onChange={e=>setSenhaAtual(e.target.value)}/></label>
+        <label className="field"><span>Nova senha (mín. 12 caracteres)</span><input type="password" autoComplete="new-password" minLength={12} maxLength={128} className="input" required value={novaSenha} onChange={e=>setNovaSenha(e.target.value)}/></label>
+        <Button type="submit" disabled={alterandoSenha}>{alterandoSenha?'Alterando...':'Atualizar minha senha'}</Button>
+      </form>{senhaAviso && <p role="status" className="text-sm mt-3 muted">{senhaAviso}</p>}
+    </Card></div>
     {isAdmin && <div className="grid lg:grid-cols-2 gap-5 mt-6">
       <Card><CardTitle title="Gerenciar equipe" subtitle={`Usuários de ${user?.empresa.nome}. Somente este ambiente.`}/>
         <form className="space-y-3" onSubmit={cadastrar}>
@@ -60,6 +81,6 @@ export function Configuracoes() {
         {clearMessage && <p role="status" className="text-sm text-emerald-500 mt-3">{clearMessage}</p>}
       </Card>
     </div>}
-    <div className="info-note mt-6"><ShieldAlert className="shrink-0 text-amber-500" size={19}/><p><strong>Ambiente educacional.</strong> A versão 0.3 inclui login e isolamento por empresa no backend, mas precisa de testes de segurança, migrações versionadas, backups e revisão antes de usar dados corporativos reais na internet.</p></div>
+    <div className="info-note mt-6"><ShieldAlert className="shrink-0 text-amber-500" size={19}/><p><strong>Ambiente educacional.</strong> A versão 0.4 prepara migrações e infraestrutura, mas ainda exige homologação, MFA e testes de restauração antes de usar dados corporativos reais na internet.</p></div>
   </div>
 }

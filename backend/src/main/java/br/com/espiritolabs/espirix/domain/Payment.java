@@ -21,6 +21,8 @@ public class Payment {
     private Invoice titulo;
     @Column(nullable = false, precision = 19, scale = 2)
     private BigDecimal valor;
+    @Column(name = "usuario_id")
+    private Long usuarioId;
     @Column(name = "data_pagamento", nullable = false)
     private LocalDate dataPagamento;
     @Column(name = "registrado_em", nullable = false, updatable = false)

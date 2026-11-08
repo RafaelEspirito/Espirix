@@ -1,3 +1,5 @@
+# Sobreposicao: servidor com DNS configurado e portas 80/443 liberadas.
+# Ex.: docker compose -f docker-compose.yml -f docker-compose.public.yml up -d --build
 services:
   caddy:
     image: caddy:2-alpine
@@ -5,7 +7,7 @@ services:
       - "80:80"
       - "443:443"
     environment:
-      ESPIRIX_DOMAIN: ${ESPIRIX_DOMAIN:?Informe ESPIRIX_DOMAIN e ajuste DNS}
+      ESPIRIX_DOMAIN: ${ESPIRIX_DOMAIN:?Defina ESPIRIX_DOMAIN}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
