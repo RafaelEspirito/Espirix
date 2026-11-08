@@ -1,4 +1,8 @@
-# Contrato REST — Etapa 1
+# Espirix — Contrato REST (Backend inicial)
+
+**Espirito Labs** · API Java 21 / Spring Boot 3.5
+
+Esta documentação descreve os endpoints implementados na primeira etapa do Espirix. Os caminhos `/api/...` foram mantidos para preservar a compatibilidade com o backend atual; a identidade do produto não depende de um ERP específico.
 
 Base URL: `http://localhost:8080`. Respostas JSON. Datas `YYYY-MM-DD`, valores monetários como números decimais sem conversão para `double` no Java.
 
@@ -66,3 +70,5 @@ HTTP `400` para entrada inválida; `404` para ID inexistente; `413` para upload 
 ```
 
 Há também documentação navegável no Swagger: `/swagger-ui.html`.
+
+> **Segurança:** esta API ainda não implementa autenticação, autorização por usuário ou isolamento entre organizações. Utilize somente dados fictícios ou devidamente anonimizados em ambiente local; não exponha o serviço publicamente com dados reais.

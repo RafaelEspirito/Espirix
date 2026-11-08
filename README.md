@@ -1,8 +1,38 @@
-# OMIE Financeiro — Backend (Etapa 1/3)
+# Espirix
 
-API REST em **Java 21 + Spring Boot 3.5** para importar relatórios exportados do ERP OMIE, acompanhar títulos financeiros, registrar baixas parciais/totais e fornecer indicadores para um dashboard React.
+**Plataforma de gestão financeira · by Espirito Labs**
 
-> **Projeto educacional / portfólio, não pronto para produção.** Sem autenticação, autorização por usuário, auditoria regulatória completa, isolamento multitenant, controle de permissão de acesso aos dados e migrações versionadas. **Não importe dados reais/confidenciais em um servidor público**. O modo privacidade da Etapa 2 mascara *somente a interface*, não oculta conteúdo da API/BD.
+> **Status:** backend inicial implementado e validado com 9 testes automatizados. Frontend React planejado.
+
+O **Espirix** é um projeto pessoal de software para gestão financeira, pensado para evoluir de um backend de controle de títulos para uma plataforma modular de uso pessoal e empresarial. O sistema não depende de um ERP específico: a versão inicial inclui importação de relatórios CSV e PDF, com convenções compatíveis com exportações de ERP.
+
+## Funcionalidades atuais
+
+- Cadastro e consulta de clientes e títulos a pagar/receber.
+- Importação de relatórios CSV e PDF com validação e controle de duplicidades.
+- Registro de pagamentos parciais, totais e em lote.
+- Indicadores financeiros e dados para dashboards.
+- API REST documentada com OpenAPI/Swagger.
+- Persistência local em H2 e configuração opcional para PostgreSQL.
+
+## Tecnologias
+
+**Backend:** Java 21, Spring Boot 3.5, Spring Data JPA, Maven, H2, PostgreSQL, Apache Commons CSV, Apache PDFBox, JUnit e OpenAPI.
+
+**Frontend planejado:** React, TypeScript, Vite, Tailwind CSS e biblioteca de gráficos.
+
+## Roadmap
+
+- [x] Backend inicial com importação, títulos, pagamentos e métricas.
+- [ ] Interface web com dashboard, filtros e visualizações.
+- [ ] Autenticação, autorização e isolamento seguro de dados.
+- [ ] Migrações versionadas, auditoria e melhorias de desempenho.
+- [ ] Novos adaptadores de importação e recursos de gestão financeira pessoal/empresarial.
+
+## Backend — guia técnico
+
+
+> **Projeto educacional / portfólio, não pronto para produção.** Sem autenticação, autorização por usuário, auditoria regulatória completa, isolamento multitenant, controle de permissão de acesso aos dados e migrações versionadas. **Não importe dados reais/confidenciais em um servidor público**. Um eventual modo privacidade no frontend mascara *somente a interface*, não oculta conteúdo da API/BD.
 
 ## Requisitos
 
@@ -51,9 +81,9 @@ Cabeçalhos podem variar entre aliases configurados em `ReportRowMapper`. Campos
 
 ### PDF: limitações reais
 
-PDFBox **não é um extrator semântico universal de tabelas**. Este backend implementa um parser para **PDFs com texto selecionável e colunas separadas/alinhadas**. Primeiro tenta reconstruir colunas pelos espaços do texto; depois usa as coordenadas X/Y dos caracteres. Se a disposição do relatório não for compatível, **rejeita o arquivo** (em vez de criar lançamentos incorretos). Não possui OCR para imagens escaneadas, nem foi calibrado com um relatório PDF real do OMIE.
+PDFBox **não é um extrator semântico universal de tabelas**. Este backend implementa um parser para **PDFs com texto selecionável e colunas separadas/alinhadas**. Primeiro tenta reconstruir colunas pelos espaços do texto; depois usa as coordenadas X/Y dos caracteres. Se a disposição do relatório não for compatível, **rejeita o arquivo** (em vez de criar lançamentos incorretos). Não possui OCR para imagens escaneadas, nem foi calibrado com todos os layouts de relatórios de ERPs.
 
-Para suportar precisamente seu relatório OMIE, salve/exporte um **exemplo anonimizado** desse PDF e ajuste o adaptador `PdfReportParser` / `PdfGeometryExtractor` conforme cabeçalho, posição das colunas, quebra de página, totais e possíveis linhas multilinhas. Um CSV normalmente é a opção mais segura quando disponível.
+Para suportar um layout específico de relatório ERP, salve/exporte um **exemplo anonimizado** desse PDF e ajuste o adaptador `PdfReportParser` / `PdfGeometryExtractor` conforme cabeçalho, posição das colunas, quebra de página, totais e possíveis linhas multilinhas. Um CSV normalmente é a opção mais segura quando disponível.
 
 ## Baixas e evolução
 
@@ -108,7 +138,7 @@ Um título `PAGA_PARCIAL` também pode estar **em atraso**: seu DTO traz `emAtra
 
 ```bash
 SPRING_PROFILES_ACTIVE=postgres \
-DB_URL=jdbc:postgresql://localhost:5432/omie_financeiro \
+DB_URL=jdbc:postgresql://localhost:5432/espirix \
 DB_USER=postgres DB_PASSWORD=senha-forte \
 mvn spring-boot:run
 ```
@@ -118,3 +148,8 @@ As credenciais devem estar em variáveis de ambiente, nunca no Git. O esquema é
 **Limitação de escala:** relatórios de dashboard e consolidação carregam lançamentos na memória para prototipação. Com grandes bases, substitua por consultas agregadas/paginadas no PostgreSQL e materialização de séries de eventos.
 
 A lista completa dos endpoints está em [`docs/API.md`](docs/API.md), e as decisões do modelo de dados em [`docs/ARQUITETURA.md`](docs/ARQUITETURA.md).
+
+
+---
+
+**Espirix** é desenvolvido como projeto pessoal sob a identidade **Espirito Labs**. Nomes de ERPs citados nesta documentação identificam apenas formatos ou integrações; não representam afiliação ou endosso.
