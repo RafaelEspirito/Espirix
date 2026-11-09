@@ -27,10 +27,10 @@ public final class ReportRowMapper {
         alias("pagamento", "pagamento", "data pagamento", "data baixa", "data recebimento", "dt pagamento", "dt baixa");
         alias("valor", "valor", "valor original", "valor titulo", "valor do titulo", "valor documento",
             "valor da nota", "valor total", "vlr original", "vlr titulo", "valor a receber", "valor a pagar",
-            "vlr documento", "vlr total", "valor total do documento");
+            "vlr documento", "vlr total", "valor total do documento", "valor da conta", "valor liquido");
         alias("valorPago", "valor pago", "valor recebido", "valor baixado", "valor liquidado",
-            "valor ja pago", "valor ja recebido", "vlr pago", "vlr baixado");
-        alias("saldo", "saldo", "saldo devedor", "saldo aberto", "saldo a receber", "saldo a pagar", "valor em aberto");
+            "valor ja pago", "valor ja recebido", "vlr pago", "vlr baixado", "recebido");
+        alias("saldo", "saldo", "saldo devedor", "saldo aberto", "saldo a receber", "saldo a pagar", "valor em aberto", "a receber");
         alias("status", "status", "situacao", "situacao titulo", "status titulo");
     }
     private static void alias(String canonical, String... synonyms) {
