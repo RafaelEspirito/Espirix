@@ -41,6 +41,11 @@ public class InvoiceController {
     public TituloResponse pagar(@PathVariable Long id, @Valid @RequestBody PagamentoRequest request) {
         return paymentService.pagar(id, request);
     }
+    @PostMapping("/{id}/pagamentos/{pagamentoId}/estornar")
+    public TituloResponse estornar(@PathVariable Long id, @PathVariable Long pagamentoId,
+            @Valid @RequestBody EstornoRequest request) {
+        return paymentService.estornar(id, pagamentoId, request.motivo());
+    }
     @PostMapping("/pagamentos/lote")
     public List<TituloResponse> pagarLote(@Valid @RequestBody LotePagamentosRequest request) {
         return paymentService.pagarLote(request);

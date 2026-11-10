@@ -2,7 +2,7 @@ import axios from 'axios'
 import type {
   BaixaItem, Cliente, ConsolidadoCliente, Devedor, FaixaPrevisao, FiltrosTitulos,
   Importacao, PageResult, Pagamento, PontoEvolucao, ResumoDashboard, TipoOperacao, Titulo,
-  ErrorResponse,
+  ErrorResponse, CategoriaDespesa, TipoCategoria, NovaDespesa, ResumoCategoria, CadastroCliente,
 } from '../types/api'
 
 /** O Vite redireciona /api para localhost:8080; não expõe o backend na internet. */
@@ -88,13 +88,24 @@ export const api = {
   async quitarLote(titulosIds: number[], dataPagamento: string, observacao: string) {
     return (await http.post<Titulo[]>('/titulos/quitar-lote', { titulosIds, dataPagamento, observacao })).data
   },
-  async clientes(busca = '', page = 0, size = 15) {
-    return (await http.get<PageResult<Cliente>>('/clientes', { params: { busca, page, size } })).data
+  async clientes(busca = '', page = 0, size = 15, papel?: 'cliente' | 'fornecedor') {
+    return (await http.get<PageResult<Cliente>>('/clientes', { params: { busca, page, size, ...(papel === 'cliente' ? { cliente: true } : papel === 'fornecedor' ? { fornecedor: true } : {}) } })).data
   },
   async consolidado(tipoOperacao: TipoOperacao, busca = '') {
     return (await http.get<ConsolidadoCliente[]>('/clientes/consolidado', { params: { tipoOperacao, busca } })).data
   },
   async cliente(id: number) { return (await http.get<Cliente>(`/clientes/${id}`)).data },
+  async criarCliente(payload: CadastroCliente) { return (await http.post<Cliente>('/clientes', payload)).data },
+  async editarCliente(id: number, payload: CadastroCliente) { return (await http.put<Cliente>(`/clientes/${id}`, payload)).data },
+  async categoriasDespesas() { return (await http.get<CategoriaDespesa[]>('/despesas/categorias')).data },
+  async criarCategoriaDespesa(nome: string, tipo: TipoCategoria) {
+    return (await http.post<CategoriaDespesa>('/despesas/categorias', { nome, tipo })).data
+  },
+  async criarDespesa(payload: NovaDespesa) { return (await http.post<Titulo>('/despesas', payload)).data },
+  async resumoCategorias() { return (await http.get<ResumoCategoria[]>('/despesas/categorias/resumo')).data },
+  async estornar(id: number, pagamentoId: number, motivo: string) {
+    return (await http.post<Titulo>(`/titulos/${id}/pagamentos/${pagamentoId}/estornar`, { motivo })).data
+  },
   async evolucaoCliente(id: number, tipoOperacao: TipoOperacao, meses = 12) {
     return (await http.get<PontoEvolucao[]>(`/clientes/${id}/evolucao`, { params: { tipoOperacao, meses } })).data
   },

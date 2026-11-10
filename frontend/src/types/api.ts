@@ -2,7 +2,7 @@
 export type TipoOperacao = 'RECEBER' | 'PAGAR'
 export type StatusTitulo = 'A_VENCER' | 'VENCIDA' | 'PAGA' | 'PAGA_PARCIAL'
 export type StatusImportacao = 'SUCESSO' | 'FALHA'
-export type OrigemArquivo = 'CSV' | 'PDF'
+export type OrigemArquivo = 'CSV' | 'PDF' | 'MANUAL'
 export type OrigemPagamento = 'MANUAL' | 'IMPORTACAO'
 
 export interface Cliente {
@@ -11,6 +11,10 @@ export interface Cliente {
   nomeFantasia: string | null
   cnpjCpf: string | null
   dataCadastro: string
+  emailCobranca: string | null
+  responsavelVenda: string | null
+  cliente: boolean
+  fornecedor: boolean
 }
 
 export interface Titulo {
@@ -28,6 +32,10 @@ export interface Titulo {
   status: StatusTitulo
   emAtraso: boolean
   origemArquivo: OrigemArquivo
+  categoriaId: number | null
+  categoriaNome: string | null
+  descricao: string | null
+  observacao: string | null
 }
 
 export interface Pagamento {
@@ -38,6 +46,8 @@ export interface Pagamento {
   origem: OrigemPagamento
   observacao: string | null
   registradoEm: string
+  estornadoEm: string | null
+  motivoEstorno: string | null
 }
 
 export interface Importacao {
@@ -118,4 +128,17 @@ export interface ErrorResponse {
   erro?: string
   mensagem?: string
   detalhes?: string[]
+}
+
+export type TipoCategoria = 'FIXA' | 'VARIAVEL'
+export interface CategoriaDespesa { id: number; nome: string; tipo: TipoCategoria; ativa: boolean }
+export interface NovaDespesa {
+  fornecedorId: number; categoriaId: number; descricao: string
+  dataEmissao: string; dataVencimento: string; valor: number; observacao: string
+}
+export interface ResumoCategoria { nome: string; totalPagoMes: number }
+export interface CadastroCliente {
+  razaoSocial: string; nomeFantasia: string; cnpjCpf: string
+  emailCobranca: string; responsavelVenda: string
+  cliente: boolean; fornecedor: boolean
 }

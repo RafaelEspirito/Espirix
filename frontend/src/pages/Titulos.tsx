@@ -5,6 +5,7 @@ import { api, mensagemErro } from '../services/api'
 import type { FiltrosTitulos, PageResult, Pagamento, StatusTitulo, Titulo, BaixaItem } from '../types/api'
 import { brl, dataBR, hojeISO, inteiro, parseValor, statusTitulo, STATUS_OPCOES } from '../lib/format'
 import { usePreferences } from '../contexts/Preferences'
+import { useAuth } from '../contexts/Auth'
 import { Button, Card, Empty, ErrorNotice, Loading, Modal, Pagination, PrivateText, SectionHeading, StatusPill, SuccessNotice } from '../components/UI'
 
 const INITIAL: FiltrosTitulos = { busca: '', status: '', emissaoDe: '', emissaoAte: '', vencimentoDe: '', vencimentoAte: '', somenteAbertos: false }
@@ -77,6 +78,8 @@ export function Titulos({ initialSearch = '' }: { initialSearch?: string }) {
 
 function TituloModal({ titulo, onClose, onSaved }: { titulo: Titulo; onClose: () => void; onSaved: () => void }) {
   const { privacidade } = usePreferences()
+  const { user } = useAuth()
+  const podeEditar = user?.perfil !== 'CONSULTA'
   const [history, setHistory] = useState<Pagamento[]>([])
   const [loading, setLoading] = useState(true)
   const [valor, setValor] = useState('')
@@ -90,16 +93,27 @@ function TituloModal({ titulo, onClose, onSaved }: { titulo: Titulo; onClose: ()
     const numero = parseValor(valor)
     if (numero === null) { setError('Informe um valor positivo, com no máximo duas casas decimais.'); return }
     if (numero > titulo.saldoDevedor + 0.001) { setError('O valor excede o saldo devedor.'); return }
-    if (data < titulo.dataEmissao || data > hojeISO()) { setError('A data não pode ser anterior à emissão nem posterior a hoje.'); return }
+    if (!data || data > hojeISO()) { setError('Informe uma data de pagamento válida, que não seja futura.'); return }
     setBusy(true)
     try { await api.pagar(titulo.id, { valor: numero, dataPagamento: data, observacao }); onSaved() }
     catch (e) { setError(mensagemErro(e)) } finally { setBusy(false) }
   }
+  async function estornarPagamento(p: Pagamento) {
+    const motivo = window.prompt('Informe o motivo do estorno:')
+    if (!motivo?.trim()) return
+    if (!window.confirm(`Estornar pagamento de ${brl(p.valor)}?`)) return
+    setBusy(true);setError('')
+    try { await api.estornar(titulo.id, p.id, motivo.trim());onSaved() }
+    catch(e){setError(mensagemErro(e))}finally{setBusy(false)}
+  }
   const status = statusTitulo(titulo)
   return <Modal title={`Título #${titulo.id}`} subtitle={`Documento ${titulo.numeroNota} · Parcela ${titulo.numeroParcela}`} onClose={onClose} size="xl">
     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 mb-6">{[['Valor original', brl(titulo.valorOriginal)], ['Já pago', brl(titulo.valorPago)], ['Saldo em aberto', brl(titulo.saldoDevedor)], ['Vencimento', dataBR(titulo.dataVencimento)]].map(([label, value]) => <div key={label} className="mini-stat"><p className="text-xs muted">{label}</p><p className="font-bold mt-1"><PrivateText>{value}</PrivateText></p></div>)}</div>
-    <div className="grid lg:grid-cols-2 gap-6"><div><div className="flex justify-between items-center mb-3"><h3 className="font-semibold">Detalhes</h3><StatusPill label={status.texto} tone={status.cor}/></div><dl className="detail-list"><dt>Razão social</dt><dd><PrivateText>{titulo.cliente.razaoSocial}</PrivateText></dd><dt>Emissão</dt><dd>{dataBR(titulo.dataEmissao)}</dd><dt>Origem</dt><dd>{titulo.origemArquivo}</dd><dt>Tipo</dt><dd>{titulo.tipoOperacao === 'RECEBER' ? 'Conta a receber' : 'Conta a pagar'}</dd></dl><h3 className="font-semibold mt-6 mb-3">Histórico de pagamentos</h3>{loading ? <Loading/> : history.length ? <div className="space-y-2 max-h-56 overflow-y-auto">{history.map(p => <div key={p.id} className="mini-stat flex justify-between gap-3"><div><div className="font-semibold text-sm"><PrivateText>{brl(p.valor)}</PrivateText></div><p className="text-xs muted mt-1">{dataBR(p.dataPagamento)} · {p.origem === 'MANUAL' ? 'Manual' : 'Importação'}</p>{p.observacao && <p className="text-xs muted mt-1"><PrivateText>{p.observacao}</PrivateText></p>}</div><ReceiptText size={17} className="shrink-0 text-cyan-500"/></div>)}</div> : <Empty title="Sem pagamentos registrados" subtitle="Os registros de baixas aparecerão aqui."/>}</div>
-      <div><h3 className="font-semibold mb-3">Registrar baixa</h3>{titulo.saldoDevedor <= 0 ? <div className="success-notice"><CheckCheck size={18}/> Este título já está quitado.</div> : <form onSubmit={submit} className="space-y-4"><label className="field"><span>Valor (R$)</span><input className="input" inputMode="decimal" placeholder="Ex.: 250,00" value={valor} onChange={e => setValor(e.target.value)} required/></label><div className="flex flex-wrap items-center gap-2"><Button type="button" variant="secondary" onClick={() => setValor(titulo.saldoDevedor.toFixed(2).replace('.', ','))}>Usar saldo integral</Button><span className="text-xs muted">Até <PrivateText>{brl(titulo.saldoDevedor)}</PrivateText></span></div><label className="field"><span>Data do pagamento</span><input className="input" type="date" value={data} min={titulo.dataEmissao} max={hojeISO()} onChange={e => setData(e.target.value)} required/></label><label className="field"><span>Observação (opcional)</span><textarea className="input min-h-20" maxLength={300} value={observacao} onChange={e => setObservacao(e.target.value)} placeholder="Ex.: Pix confirmado"/></label>{error && <ErrorNotice error={error}/>}<Button disabled={busy || privacidade} className="w-full" type="submit"><Send size={16}/>{busy ? 'Registrando...' : 'Confirmar pagamento'}</Button>{privacidade && <p className="text-xs muted">Desative a privacidade para registrar uma baixa.</p>}<p className="text-[0.69rem] muted">A baixa será gravada no H2 pelo backend. Não é possível desfazer por esta interface.</p></form>}</div></div>
+    <div className="grid lg:grid-cols-2 gap-6"><div><div className="flex justify-between items-center mb-3"><h3 className="font-semibold">Detalhes</h3><StatusPill label={status.texto} tone={status.cor}/></div><dl className="detail-list"><dt>Razão social</dt><dd><PrivateText>{titulo.cliente.razaoSocial}</PrivateText></dd><dt>Emissão</dt><dd>{dataBR(titulo.dataEmissao)}</dd><dt>Origem</dt><dd>{titulo.origemArquivo}</dd><dt>Tipo</dt><dd>{titulo.tipoOperacao === 'RECEBER' ? 'Conta a receber' : 'Conta a pagar'}</dd></dl><h3 className="font-semibold mt-6 mb-3">Histórico de pagamentos</h3>{loading ? <Loading/> : history.length ? <div className="space-y-2 max-h-56 overflow-y-auto">{history.map(p => <div key={p.id} className="mini-stat flex justify-between gap-3"><div><div className="font-semibold text-sm"><PrivateText>{brl(p.valor)}</PrivateText></div><p className="text-xs muted mt-1">{dataBR(p.dataPagamento)} · {p.origem === 'MANUAL' ? 'Manual' : 'Importação'}</p>{p.observacao && <p className="text-xs muted mt-1"><PrivateText>{p.observacao}</PrivateText></p>}
+      {p.estornadoEm && <p className="text-xs text-amber-500 mt-1">Estornado: {p.motivoEstorno}</p>}
+      {podeEditar && p.origem==='MANUAL' && !p.estornadoEm && <Button variant="secondary" disabled={busy || privacidade} onClick={()=>void estornarPagamento(p)}>Estornar pagamento</Button>}
+    </div><ReceiptText size={17} className="shrink-0 text-cyan-500"/></div>)}</div> : <Empty title="Sem pagamentos registrados" subtitle="Os registros de baixas aparecerão aqui."/>}</div>
+      <div><h3 className="font-semibold mb-3">Registrar baixa</h3>{!podeEditar ? <p className="muted text-sm">Seu perfil é somente consulta.</p> : titulo.saldoDevedor <= 0 ? <div className="success-notice"><CheckCheck size={18}/> Este título já está quitado.</div> : <form onSubmit={submit} className="space-y-4"><label className="field"><span>Valor (R$)</span><input className="input" inputMode="decimal" placeholder="Ex.: 250,00" value={valor} onChange={e => setValor(e.target.value)} required/></label><div className="flex flex-wrap items-center gap-2"><Button type="button" variant="secondary" onClick={() => setValor(titulo.saldoDevedor.toFixed(2).replace('.', ','))}>Usar saldo integral</Button><span className="text-xs muted">Até <PrivateText>{brl(titulo.saldoDevedor)}</PrivateText></span></div><label className="field"><span>Data do pagamento</span><input className="input" type="date" value={data} max={hojeISO()} onChange={e => setData(e.target.value)} required/></label><label className="field"><span>Observação (opcional)</span><textarea className="input min-h-20" maxLength={300} value={observacao} onChange={e => setObservacao(e.target.value)} placeholder="Ex.: Pix confirmado"/></label>{error && <ErrorNotice error={error}/>}<Button disabled={busy || privacidade} className="w-full" type="submit"><Send size={16}/>{busy ? 'Registrando...' : 'Confirmar pagamento'}</Button>{privacidade && <p className="text-xs muted">Desative a privacidade para registrar uma baixa.</p>}<p className="text-[0.69rem] muted">A baixa é registrada no banco do ambiente atual. Pagamentos manuais podem ser estornados com justificativa.</p></form>}</div></div>
   </Modal>
 }
 
@@ -116,7 +130,7 @@ function BatchModal({ titulos, onClose, onSaved }: { titulos: Titulo[]; onClose:
     for (const t of titulos) {
       const amount = parseValor(amounts[t.id] || '')
       if (amount === null || amount > t.saldoDevedor + 0.001) { setError(`Valor inválido para o documento ${t.numeroNota}.`); return }
-      if (date < t.dataEmissao || date > hojeISO()) { setError(`Data inválida para o documento ${t.numeroNota}.`); return }
+      if (!date || date > hojeISO()) { setError(`Data inválida para o documento ${t.numeroNota}: não pode ser futura.`); return }
       items.push({ tituloId: t.id, valor: amount, dataPagamento: date })
     }
     if (!window.confirm(`Registrar ${items.length} pagamento(s) em lote?`)) return

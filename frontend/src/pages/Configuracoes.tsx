@@ -81,6 +81,6 @@ export function Configuracoes() {
         {clearMessage && <p role="status" className="text-sm text-emerald-500 mt-3">{clearMessage}</p>}
       </Card>
     </div>}
-    <div className="info-note mt-6"><ShieldAlert className="shrink-0 text-amber-500" size={19}/><p><strong>Ambiente educacional.</strong> A versão 0.4 prepara migrações e infraestrutura, mas ainda exige homologação, MFA e testes de restauração antes de usar dados corporativos reais na internet.</p></div>
+    <div className="info-note mt-6"><ShieldAlert className="shrink-0 text-amber-500" size={19}/><p><strong>Segurança de produção.</strong> A publicação externa requer autorização da empresa, backups com restauração testada, MFA e homologação da infraestrutura.</p></div>
   </div>
 }

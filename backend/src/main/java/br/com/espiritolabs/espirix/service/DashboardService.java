@@ -28,8 +28,8 @@ public class DashboardService {
         return clienteId == null ? invoices.findByEmpresaIdAndTipoOperacao(empresa.id(),tipo) : invoices.findByEmpresaIdAndClienteIdAndTipoOperacao(empresa.id(),clienteId, tipo);
     }
     private List<Payment> pagos(TipoOperacao tipo, Long clienteId) {
-        return clienteId == null ? payments.findByEmpresaIdAndTituloTipoOperacao(empresa.id(),tipo)
-            : payments.findByEmpresaIdAndTituloClienteIdAndTituloTipoOperacao(empresa.id(),clienteId, tipo);
+        return clienteId == null ? payments.findByEmpresaIdAndTituloTipoOperacaoAndEstornadoEmIsNull(empresa.id(),tipo)
+            : payments.findByEmpresaIdAndTituloClienteIdAndTituloTipoOperacaoAndEstornadoEmIsNull(empresa.id(),clienteId, tipo);
     }
     private static BigDecimal sum(Collection<BigDecimal> valores) {
         return valores.stream().reduce(ZERO, BigDecimal::add);

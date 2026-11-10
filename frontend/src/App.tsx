@@ -9,8 +9,9 @@ import { Titulos } from './pages/Titulos'
 import { Clientes } from './pages/Clientes'
 import { Importacoes } from './pages/Importacoes'
 import { Configuracoes } from './pages/Configuracoes'
+import { Despesas } from './pages/Despesas'
 
-const pages: PageName[] = ['dashboard', 'titulos', 'clientes', 'importacoes', 'configuracoes']
+const pages: PageName[] = ['dashboard', 'titulos', 'despesas', 'clientes', 'importacoes', 'configuracoes']
 function currentLocation(): { page: PageName; search: string } {
   const raw = window.location.hash.replace(/^#\/?/, '')
   const [route = '', query = ''] = raw.split('?')
@@ -38,6 +39,7 @@ function AppContent() {
   return <Shell key={user.empresa.id} page={location.page} onPage={navigate}>
     {location.page === 'dashboard' && <Dashboard navigate={navigate}/>}
     {location.page === 'titulos' && <Titulos initialSearch={location.search}/>}
+    {location.page === 'despesas' && <Despesas/>}
     {location.page === 'clientes' && <Clientes navigate={navigate}/>}
     {location.page === 'importacoes' && <Importacoes/>}
     {location.page === 'configuracoes' && <Configuracoes/>}

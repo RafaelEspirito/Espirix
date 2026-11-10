@@ -20,8 +20,16 @@ public class Client {
     private String nomeFantasia;
     @Column(name = "cnpj_cpf", length = 14)
     private String cnpjCpf;
+    @Column(name = "email_cobranca", length = 200)
+    private String emailCobranca;
+    @Column(name = "responsavel_venda", length = 150)
+    private String responsavelVenda;
     @Column(name = "chave_busca", nullable = false, length = 220)
     private String chaveBusca;
+    @Column(name = "eh_cliente", nullable = false)
+    private boolean cliente = true;
+    @Column(name = "eh_fornecedor", nullable = false)
+    private boolean fornecedor = false;
     @Column(name = "data_cadastro", nullable = false, updatable = false)
     private LocalDateTime dataCadastro;
     @PrePersist

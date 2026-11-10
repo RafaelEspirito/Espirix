@@ -16,12 +16,14 @@ import java.util.List;
 public class ClientController {
     private final InvoiceService invoices;
     private final DashboardService dashboard;
+    private final br.com.espiritolabs.espirix.service.ClientRegistrationService cadastro;
 
     @GetMapping
     public Page<ClienteResponse> listar(@RequestParam(required = false) String busca,
+            @RequestParam(required = false) Boolean cliente, @RequestParam(required = false) Boolean fornecedor,
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
         if (page < 0 || size < 1 || size > 100) throw BusinessException.badRequest("Paginacao invalida");
-        return invoices.clientes(busca, PageRequest.of(page, size, Sort.by("razaoSocial")));
+        return invoices.clientes(busca, cliente, fornecedor, PageRequest.of(page, size, Sort.by("razaoSocial")));
     }
     @GetMapping("/consolidado")
     public List<ConsolidadoCliente> consolidado(
@@ -34,6 +36,14 @@ public class ClientController {
             @RequestParam(defaultValue = "RECEBER") TipoOperacao tipoOperacao) {
         return dashboard.consolidado(busca, emissaoDe, emissaoAte, vencimentoDe,
                 vencimentoAte, status, tipoOperacao);
+    }
+    @PostMapping
+    public ClienteResponse criar(@jakarta.validation.Valid @RequestBody br.com.espiritolabs.espirix.service.ClientRegistrationService.CadastroRequest request) {
+        return cadastro.criar(request);
+    }
+    @PutMapping("/{id}")
+    public ClienteResponse editar(@PathVariable Long id, @jakarta.validation.Valid @RequestBody br.com.espiritolabs.espirix.service.ClientRegistrationService.CadastroRequest request) {
+        return cadastro.editar(id,request);
     }
     @GetMapping("/{id}")
     public ClienteResponse buscar(@PathVariable Long id) { return invoices.cliente(id); }
