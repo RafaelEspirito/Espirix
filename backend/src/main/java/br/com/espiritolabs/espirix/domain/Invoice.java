@@ -43,8 +43,15 @@ public class Invoice {
     @Column(nullable = false, length = 20)
     private StatusTitulo status;
     @Enumerated(EnumType.STRING)
-    @Column(name = "origem_arquivo", nullable = false, length = 5)
+    @Column(name = "origem_arquivo", nullable = false, length = 10)
     private OrigemArquivo origemArquivo;
+    @Column(name = "descricao", length = 200)
+    private String descricao;
+    @Column(name = "observacao", length = 300)
+    private String observacao;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "categoria_id")
+    private ExpenseCategory categoria;
     @Version
     private Long versao;
 

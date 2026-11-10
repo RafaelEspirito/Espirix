@@ -13,14 +13,17 @@ public final class ApiDtos {
     private ApiDtos() { }
 
     public record ClienteResponse(Long id, String razaoSocial, String nomeFantasia,
-                                  String cnpjCpf, LocalDateTime dataCadastro) { }
+                                  String cnpjCpf, LocalDateTime dataCadastro,
+                                  String emailCobranca, String responsavelVenda, boolean cliente, boolean fornecedor) { }
     public record TituloResponse(Long id, String numeroNota, String numeroParcela, ClienteResponse cliente,
                                  TipoOperacao tipoOperacao, LocalDate dataEmissao, LocalDate dataVencimento,
                                  LocalDate dataPagamento, BigDecimal valorOriginal, BigDecimal valorPago,
                                  BigDecimal saldoDevedor, StatusTitulo status, boolean emAtraso,
-                                 OrigemArquivo origemArquivo) { }
+                                 OrigemArquivo origemArquivo, Long categoriaId, String categoriaNome,
+                                 String descricao, String observacao) { }
     public record PagamentoResponse(Long id, Long tituloId, BigDecimal valor, LocalDate dataPagamento,
-                                    OrigemPagamento origem, String observacao, LocalDateTime registradoEm) { }
+                                    OrigemPagamento origem, String observacao, LocalDateTime registradoEm,
+                                    LocalDateTime estornadoEm, String motivoEstorno) { }
     public record ImportacaoResponse(Long id, String nomeArquivo, OrigemArquivo tipoArquivo,
                                      LocalDateTime dataImportacao, int quantidadeRegistrosNovos,
                                      int quantidadeAtualizados, int quantidadeIgnorados,
@@ -28,6 +31,7 @@ public final class ApiDtos {
     public record PagamentoRequest(@NotNull @DecimalMin("0.01") @Digits(integer = 17, fraction = 2) BigDecimal valor,
                                    @NotNull @PastOrPresent LocalDate dataPagamento,
                                    @Size(max = 300) String observacao) { }
+    public record EstornoRequest(@NotBlank @Size(max = 300) String motivo) { }
     public record ItemBaixaRequest(@NotNull Long tituloId, @NotNull @DecimalMin("0.01") @Digits(integer = 17, fraction = 2) BigDecimal valor,
                                    @NotNull @PastOrPresent LocalDate dataPagamento) { }
     public record LotePagamentosRequest(@NotEmpty List<@Valid ItemBaixaRequest> pagamentos,

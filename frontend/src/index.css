@@ -142,3 +142,7 @@ select option { background: var(--surface); color: var(--text); }
   .settings-row { align-items: flex-start; }
   .modal-panel { padding: 17px; }
 }
+
+@media (min-width: 1024px) {
+  .layout.sidebar-collapsed .sidebar { display: none; }
+}

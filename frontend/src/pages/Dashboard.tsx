@@ -3,7 +3,7 @@ import { Activity, CalendarClock, Clock3, FileCheck2, Files, RefreshCw, Trending
 import { Area, AreaChart, CartesianGrid, Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { api, mensagemErro } from '../services/api'
 import type { Devedor, FaixaPrevisao, PageResult, PontoEvolucao, ResumoDashboard, Titulo } from '../types/api'
-import { brl, compactBRL, dataBR, inteiro, mesBR, statusTitulo } from '../lib/format'
+import { brl, compactBRL, dataBR, inteiro, mesBR, statusTitulo, hojeISO } from '../lib/format'
 import { usePreferences } from '../contexts/Preferences'
 import { Button, Card, CardTitle, Empty, ErrorNotice, InlineLink, Loading, PrivateText, PrivacyPlaceholder, SectionHeading, StatusPill } from '../components/UI'
 import type { PageName } from '../components/Shell'
@@ -14,9 +14,13 @@ function Stat({ label, value, note, icon: Icon, accent = 'cyan' }: { label: stri
 }
 interface DashboardData {
   resumo: ResumoDashboard | null; evolucao: PontoEvolucao[]; previsao: FaixaPrevisao[];
-  top: Devedor[]; recentes: Titulo[]; error: string | null
+  top: Devedor[]; recentes: Titulo[]; notas7: Titulo[]; notas15: Titulo[]; notas30: Titulo[]; error: string | null
 }
-const INITIAL: DashboardData = { resumo: null, evolucao: [], previsao: [], top: [], recentes: [], error: null }
+const INITIAL: DashboardData = { resumo: null, evolucao: [], previsao: [], top: [], recentes: [], notas7: [], notas15: [], notas30: [], error: null }
+function diaMais(dias:number) {
+  const d=new Date(); d.setDate(d.getDate()+dias)
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
 export function Dashboard({ navigate }: { navigate: (p: PageName, query?: string) => void }) {
   const { tipo, privacidade } = usePreferences()
   const [meses, setMeses] = useState(12)
@@ -28,19 +32,31 @@ export function Dashboard({ navigate }: { navigate: (p: PageName, query?: string
     let active = true
     setLoading(true)
     setData(INITIAL)
-    Promise.allSettled([
-      api.resumo(tipo), api.evolucao(tipo, meses), api.previsao(tipo),
-      api.topDevedores(tipo, 5), api.titulos(tipo, { somenteAbertos: true }, 0, 5),
-    ]).then(result => {
+    const faixaRequests = tipo==='RECEBER' ? [
+      api.titulos('RECEBER',{ somenteAbertos:true, vencimentoDe:hojeISO(), vencimentoAte:diaMais(7)},0,5),
+      api.titulos('RECEBER',{ somenteAbertos:true, vencimentoDe:diaMais(8), vencimentoAte:diaMais(15)},0,5),
+      api.titulos('RECEBER',{ somenteAbertos:true, vencimentoDe:diaMais(16), vencimentoAte:diaMais(30)},0,5),
+    ] : []
+    Promise.all([
+      Promise.allSettled([
+        api.resumo(tipo), api.evolucao(tipo, meses), api.previsao(tipo),
+        api.topDevedores(tipo, 5), api.titulos(tipo, { somenteAbertos: true, vencimentoDe: hojeISO() }, 0, 5),
+      ]),
+      Promise.allSettled(faixaRequests),
+    ]).then(([result, faixas]) => {
       if (!active) return
       const [r, e, p, t, titles] = result
-      const failed = result.find(s => s.status === 'rejected')
+      const [n7, n15, n30] = faixas
+      const failed = [...result,...faixas].find(s => s.status === 'rejected')
       setData({
         resumo: r.status === 'fulfilled' ? r.value : null,
         evolucao: e.status === 'fulfilled' ? e.value : [],
         previsao: p.status === 'fulfilled' ? p.value : [],
         top: t.status === 'fulfilled' ? t.value : [],
         recentes: titles.status === 'fulfilled' ? (titles.value as PageResult<Titulo>).content : [],
+        notas7: n7?.status === 'fulfilled' ? (n7.value as PageResult<Titulo>).content : [],
+        notas15: n15?.status === 'fulfilled' ? (n15.value as PageResult<Titulo>).content : [],
+        notas30: n30?.status === 'fulfilled' ? (n30.value as PageResult<Titulo>).content : [],
         error: failed?.status === 'rejected' ? mensagemErro(failed.reason) : null,
       })
       setLoading(false)
@@ -63,8 +79,13 @@ export function Dashboard({ navigate }: { navigate: (p: PageName, query?: string
       </div>
       <div className="grid lg:grid-cols-2 gap-5">
         <Card><CardTitle title={tipo === 'RECEBER' ? 'Maiores saldos por cliente' : 'Maiores obrigações por fornecedor'} subtitle="Ranking de contrapartes com valores em aberto" action={<InlineLink onClick={() => navigate('clientes')}>Ver todos</InlineLink>}/>{privacidade ? <PrivacyPlaceholder/> : data.top.length ? <div className="space-y-5">{data.top.map((c, idx) => { const max = data.top[0]?.saldoDevedor || 1; return <div key={c.clienteId}><div className="flex justify-between items-center gap-2 text-sm mb-2"><span className="truncate font-medium">{c.nomeFantasia || c.razaoSocial}</span><span className="tabular-nums font-semibold whitespace-nowrap">{brl(c.saldoDevedor)}</span></div><div className="track"><div className="track-fill" style={{ width: `${Math.max(2, c.saldoDevedor / max * 100)}%`, background: COLORS[idx % COLORS.length] }}/></div></div> })}</div> : <Empty title="Sem saldos pendentes"/>}</Card>
-        <Card><CardTitle title="Próximos vencimentos" subtitle="Títulos abertos ordenados pela data de vencimento" action={<InlineLink onClick={() => navigate('titulos')}>Ver títulos</InlineLink>}/>{data.recentes.length ? <div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Cliente / fornecedor</th><th>Vencimento</th><th className="text-right">Saldo</th></tr></thead><tbody>{data.recentes.map(t => <tr key={t.id}><td className="font-medium"><PrivateText>{t.cliente.nomeFantasia || t.cliente.razaoSocial}</PrivateText><div className="text-xs muted mt-1"><PrivateText>NF {t.numeroNota}</PrivateText></div></td><td><span className="block text-sm">{dataBR(t.dataVencimento)}</span><div className="mt-1"><StatusPill {...(() => { const s = statusTitulo(t); return { label: s.texto, tone: s.cor } })()}/></div></td><td className="text-right whitespace-nowrap font-semibold"><PrivateText>{brl(t.saldoDevedor)}</PrivateText></td></tr>)}</tbody></table></div> : <Empty title="Nenhum título aberto" subtitle="Faça uma importação para começar."/>}</Card>
+        <Card><CardTitle title="Próximos vencimentos" subtitle="Títulos abertos ordenados pela data de vencimento" action={<InlineLink onClick={() => navigate('titulos')}>Ver títulos</InlineLink>}/>{data.recentes.length ? <div className="overflow-x-auto"><table className="data-table"><thead><tr><th>Cliente / fornecedor</th><th>Vencimento</th><th className="text-right">Saldo</th></tr></thead><tbody>{data.recentes.map(t => <tr key={t.id}><td className="font-medium"><PrivateText>{t.cliente.nomeFantasia || t.cliente.razaoSocial}</PrivateText><div className="text-xs muted mt-1"><PrivateText>NF {t.numeroNota}</PrivateText></div></td><td><span className="block text-sm">{dataBR(t.dataVencimento)}</span><div className="mt-1"><StatusPill {...(() => { const s = statusTitulo(t); return { label: s.texto, tone: s.cor } })()}/></div></td><td className="text-right whitespace-nowrap font-semibold"><PrivateText>{brl(t.saldoDevedor)}</PrivateText></td></tr>)}</tbody></table></div> : <Empty title="Nenhum vencimento futuro" subtitle="Consulte os vencidos em Títulos financeiros ou cadastre uma despesa."/>}</Card>
       </div>
+      {tipo==='RECEBER' && <div className="grid md:grid-cols-3 gap-4">
+        {([['0–7 dias',data.notas7],['8–15 dias',data.notas15],['16–30 dias',data.notas30]] as [string,Titulo[]][]).map(([faixa,titulos])=><Card key={faixa}><CardTitle title={`Recebimentos previstos · ${faixa}`} subtitle="Títulos abertos, por vencimento"/>
+          {titulos.length ? <div className="space-y-3">{titulos.map(t=><div key={t.id} className="flex justify-between gap-3 border-t subtle-border pt-2 text-xs"><div><p className="font-semibold"><PrivateText>{t.cliente.nomeFantasia||t.cliente.razaoSocial}</PrivateText></p><p className="muted">{dataBR(t.dataVencimento)} · NF {t.numeroNota}</p></div><div className="font-semibold whitespace-nowrap"><PrivateText>{brl(t.saldoDevedor)}</PrivateText></div></div>)}<p className="muted text-xs">Exibindo os 5 vencimentos mais próximos da faixa.</p></div> : <Empty title="Sem títulos nessa faixa"/>}
+        </Card>)}
+      </div>}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3"><MiniStat icon={FileCheck2} label="Quitados no mês" value={data.resumo.totalQuitadoMes}/><MiniStat icon={CalendarClock} label="Próximos 7 dias" value={data.resumo.aVencer7Dias}/><MiniStat icon={Clock3} label="Próximos 15 dias" value={data.resumo.aVencer15Dias}/><MiniStat icon={Files} label="Títulos abertos" value={data.resumo.quantidadeTitulosAbertos} count/></div>
     </> : !data.error && <Empty title="O resumo ainda não está disponível"/>}
   </div>

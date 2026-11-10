@@ -32,13 +32,18 @@ public class InvoiceService {
         return DtoMapper.titulo(find(id), LocalDate.now(clock));
     }
     @Transactional(readOnly = true)
-    public Page<ClienteResponse> clientes(String busca, Pageable page) {
+    public Page<ClienteResponse> clientes(String busca, Boolean cliente, Boolean fornecedor, Pageable page) {
         Specification<Client> spec = (root, query, cb) -> {
-            if (busca == null || busca.isBlank()) return cb.equal(root.get("empresaId"), empresa.id());
+            java.util.List<Predicate> conditions = new java.util.ArrayList<>();
+            conditions.add(cb.equal(root.get("empresaId"), empresa.id()));
+            if (Boolean.TRUE.equals(cliente)) conditions.add(cb.isTrue(root.get("cliente")));
+            if (Boolean.TRUE.equals(fornecedor)) conditions.add(cb.isTrue(root.get("fornecedor")));
+            if (busca == null || busca.isBlank()) return cb.and(conditions.toArray(Predicate[]::new));
             String term = "%" + busca.trim().toLowerCase(Locale.ROOT) + "%";
-            return cb.and(cb.equal(root.get("empresaId"), empresa.id()),
-                cb.or(cb.like(cb.lower(root.get("razaoSocial")), term),
-                cb.like(cb.lower(root.get("nomeFantasia")), term)));
+            conditions.add(cb.or(cb.like(cb.lower(root.get("razaoSocial")), term),
+                cb.like(cb.lower(root.get("nomeFantasia")), term),
+                cb.like(cb.lower(root.get("responsavelVenda")), term)));
+            return cb.and(conditions.toArray(Predicate[]::new));
         };
         return clients.findAll(spec, page).map(DtoMapper::cliente);
     }

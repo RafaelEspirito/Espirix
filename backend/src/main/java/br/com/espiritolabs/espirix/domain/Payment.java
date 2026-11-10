@@ -32,6 +32,12 @@ public class Payment {
     private OrigemPagamento origem;
     @Column(length = 300)
     private String observacao;
+    @Column(name = "estornado_em")
+    private LocalDateTime estornadoEm;
+    @Column(name = "estornado_por")
+    private Long estornadoPor;
+    @Column(name = "motivo_estorno", length = 300)
+    private String motivoEstorno;
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "importacao_id")
     private ImportBatch importacao;

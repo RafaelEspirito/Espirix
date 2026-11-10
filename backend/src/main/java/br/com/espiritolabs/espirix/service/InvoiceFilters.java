@@ -26,7 +26,8 @@ public final class InvoiceFilters {
                 String term = "%" + f.busca().trim().toLowerCase(java.util.Locale.ROOT) + "%";
                 tests.add(cb.or(cb.like(cb.lower(client.get("razaoSocial")), term),
                     cb.like(cb.lower(client.get("nomeFantasia")), term),
-                    cb.like(cb.lower(root.get("numeroNota")), term)));
+                    cb.like(cb.lower(root.get("numeroNota")), term),
+                    cb.like(cb.lower(root.get("descricao")), term)));
             }
             if (f.emissaoDe() != null) tests.add(cb.greaterThanOrEqualTo(root.get("dataEmissao"), f.emissaoDe()));
             if (f.emissaoAte() != null) tests.add(cb.lessThanOrEqualTo(root.get("dataEmissao"), f.emissaoAte()));

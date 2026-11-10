@@ -1,2 +1,2 @@
 package br.com.espiritolabs.espirix.domain;
-public enum OrigemArquivo { CSV, PDF }
+public enum OrigemArquivo { CSV, PDF, MANUAL }

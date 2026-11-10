@@ -61,12 +61,44 @@ public class PaymentService {
         }
         return result;
     }
+    /** Estorno auditado e reversivel (o pagamento original permanece no historico). */
+    @Transactional
+    public TituloResponse estornar(Long tituloId, Long pagamentoId, String motivo) {
+        if (motivo == null || motivo.isBlank() || motivo.trim().length() > 300)
+            throw BusinessException.badRequest("Informe o motivo do estorno (ate 300 caracteres)");
+        companies.findLockedById(empresa.id()).orElseThrow();
+        Invoice invoice = locked(tituloId);
+        Payment pagamento = payments.findByIdAndEmpresaIdAndTituloId(pagamentoId, empresa.id(), tituloId)
+            .orElseThrow(() -> BusinessException.notFound("Pagamento nao encontrado"));
+        if (pagamento.getOrigem() != OrigemPagamento.MANUAL)
+            throw BusinessException.badRequest("Pagamentos importados nao podem ser estornados manualmente");
+        if (pagamento.getEstornadoEm() != null)
+            throw BusinessException.badRequest("Pagamento ja estornado");
+        pagamento.setEstornadoEm(LocalDateTime.now(clock));
+        pagamento.setEstornadoPor(empresa.principal().id());
+        pagamento.setMotivoEstorno(motivo.trim());
+        payments.save(pagamento);
+        invoice.setValorPago(invoice.getValorPago().subtract(pagamento.getValor()));
+        invoice.setDataPagamento(payments.findByEmpresaIdAndTituloIdOrderByDataPagamentoAscIdAsc(empresa.id(), tituloId)
+            .stream().filter(p -> p.getEstornadoEm() == null)
+            .map(Payment::getDataPagamento).max(LocalDate::compareTo).orElse(null));
+        invoice.recalcular(LocalDate.now(clock));
+        invoices.save(invoice);
+        AuditLog log = new AuditLog();
+        log.setEmpresaId(empresa.id());
+        log.setUsuarioId(empresa.principal().id());
+        log.setAcao("ESTORNO_PAGAMENTO");
+        log.setDetalhes("titulo=" + tituloId + ";pagamento=" + pagamentoId
+            + ";valor=" + pagamento.getValor() + ";motivo=" + motivo.trim());
+        audit.save(log);
+        return DtoMapper.titulo(invoice, LocalDate.now(clock));
+    }
     private Invoice locked(Long id) {
         return invoices.findLockedByIdAndEmpresaId(id,empresa.id())
             .orElseThrow(() -> BusinessException.notFound("Titulo nao encontrado: " + id));
     }
     private void aplicar(Invoice invoice, BigDecimal valor, LocalDate date, String obs) {
-        if (date == null || date.isAfter(LocalDate.now(clock)) || date.isBefore(invoice.getDataEmissao()))
+        if (date == null || date.isAfter(LocalDate.now(clock)))
             throw BusinessException.badRequest("Data de pagamento fora do intervalo valido para o titulo " + invoice.getId());
         if (valor == null || valor.signum() <= 0 || FinanceUtils.dinheiro(valor).compareTo(invoice.getSaldoDevedor()) > 0)
             throw BusinessException.badRequest("Pagamento supera o saldo ou e nao positivo: titulo " + invoice.getId());
